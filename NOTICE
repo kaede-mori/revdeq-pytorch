@@ -1,0 +1,16 @@
+NOTICE
+
+This project is a PyTorch implementation of Reversible Deep Equilibrium Models (RevDEQ).
+
+References:
+- Paper: "Reversible Deep Equilibrium Models" (arXiv:2509.12917)
+  https://arxiv.org/abs/2509.12917
+
+- Original Implementation: sammccallum/reversible-deq
+  https://github.com/sammccallum/reversible-deq
+  License: Apache-2.0
+
+This implementation is inspired by the original JAX/Equinox implementation but
+is independently implemented in PyTorch. The algorithm follows the paper's
+specification.
+

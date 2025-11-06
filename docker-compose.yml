@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  revdeq:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: revdeq
+    volumes:
+      - .:/workspace
+      - ./checkpoints:/workspace/checkpoints
+      - ./data:/workspace/data
+    environment:
+      - PYTHONUNBUFFERED=1
+    stdin_open: true
+    tty: true
+    # Uncomment if you have GPU access
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+

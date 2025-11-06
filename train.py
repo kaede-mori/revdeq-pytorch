@@ -1,0 +1,178 @@
+"""
+Training script for RevDEQ using transformers' SFT trainer
+
+Reference:
+- Paper: "Reversible Deep Equilibrium Models" (arXiv:2509.12917)
+"""
+
+import os
+import argparse
+import yaml
+import torch
+from torch.utils.data import Dataset
+from transformers import (
+    Trainer,
+    TrainingArguments,
+    DataCollatorForLanguageModeling,
+    AutoTokenizer,
+    AutoConfig
+)
+from datasets import load_dataset
+from revdeq import RevDEQ, RevDEQConfig
+
+
+class RevDEQDataset(Dataset):
+    """Dataset wrapper for RevDEQ training"""
+    
+    def __init__(self, texts, tokenizer, max_length=512):
+        self.texts = texts
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+    
+    def __len__(self):
+        return len(self.texts)
+    
+    def __getitem__(self, idx):
+        text = self.texts[idx]
+        encoding = self.tokenizer(
+            text,
+            max_length=self.max_length,
+            padding="max_length",
+            truncation=True,
+            return_tensors="pt"
+        )
+        return {
+            "input_ids": encoding["input_ids"].squeeze(),
+            "attention_mask": encoding["attention_mask"].squeeze(),
+            "labels": encoding["input_ids"].squeeze()
+        }
+
+
+def load_config(config_path: str) -> dict:
+    """Load configuration from YAML file"""
+    with open(config_path, "r") as f:
+        config = yaml.safe_load(f)
+    return config
+
+
+def prepare_dataset(dataset_name: str = "wikitext", dataset_config: str = "wikitext-2-raw-v1"):
+    """Prepare dataset for training"""
+    print(f"Loading dataset: {dataset_name}/{dataset_config}")
+    dataset = load_dataset(dataset_name, dataset_config, split="train")
+    
+    # Extract texts
+    texts = []
+    for example in dataset:
+        if "text" in example and len(example["text"].strip()) > 0:
+            texts.append(example["text"])
+    
+    return texts
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Train RevDEQ model")
+    parser.add_argument("--config", type=str, default="configs/default.yaml",
+                       help="Path to configuration file")
+    parser.add_argument("--dataset", type=str, default="wikitext",
+                       help="Dataset name")
+    parser.add_argument("--dataset_config", type=str, default="wikitext-2-raw-v1",
+                       help="Dataset configuration")
+    parser.add_argument("--output_dir", type=str, default="./checkpoints",
+                       help="Output directory for checkpoints")
+    parser.add_argument("--resume_from_checkpoint", type=str, default=None,
+                       help="Path to checkpoint to resume from")
+    
+    args = parser.parse_args()
+    
+    # Load configuration
+    config = load_config(args.config) if os.path.exists(args.config) else {}
+    
+    # Model configuration
+    model_config = RevDEQConfig(
+        hidden_size=config.get("hidden_size", 768),
+        num_layers=config.get("num_layers", 12),
+        num_heads=config.get("num_heads", 12),
+        intermediate_size=config.get("intermediate_size", 3072),
+        dropout=config.get("dropout", 0.1),
+        max_position_embeddings=config.get("max_position_embeddings", 512),
+        vocab_size=config.get("vocab_size", 50257),
+        num_fixed_point_iterations=config.get("num_fixed_point_iterations", 10),
+        fixed_point_tol=config.get("fixed_point_tol", 1e-5),
+        use_reversible=config.get("use_reversible", True),
+    )
+    
+    # Initialize tokenizer
+    tokenizer_name = config.get("tokenizer", "gpt2")
+    print(f"Loading tokenizer: {tokenizer_name}")
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    
+    # Update vocab size if needed
+    model_config.vocab_size = len(tokenizer)
+    
+    # Initialize model
+    print("Initializing RevDEQ model...")
+    model = RevDEQ(model_config)
+    
+    # Prepare dataset
+    texts = prepare_dataset(args.dataset, args.dataset_config)
+    train_dataset = RevDEQDataset(texts, tokenizer, max_length=model_config.max_position_embeddings)
+    
+    # Training arguments
+    training_args = TrainingArguments(
+        output_dir=args.output_dir,
+        num_train_epochs=config.get("num_epochs", 3),
+        per_device_train_batch_size=config.get("batch_size", 4),
+        gradient_accumulation_steps=config.get("gradient_accumulation_steps", 4),
+        learning_rate=config.get("learning_rate", 5e-5),
+        weight_decay=config.get("weight_decay", 0.01),
+        warmup_steps=config.get("warmup_steps", 1000),
+        logging_dir=os.path.join(args.output_dir, "logs"),
+        logging_steps=config.get("logging_steps", 100),
+        save_steps=config.get("save_steps", 1000),
+        save_total_limit=config.get("save_total_limit", 3),
+        evaluation_strategy="no",
+        save_strategy="steps",
+        load_best_model_at_end=False,
+        fp16=config.get("fp16", torch.cuda.is_available()),
+        bf16=config.get("bf16", False),
+        dataloader_num_workers=config.get("dataloader_num_workers", 4),
+        report_to=config.get("report_to", "tensorboard"),
+        remove_unused_columns=False,
+        push_to_hub=False,
+    )
+    
+    # Data collator
+    data_collator = DataCollatorForLanguageModeling(
+        tokenizer=tokenizer,
+        mlm=False,
+    )
+    
+    # Initialize trainer
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=train_dataset,
+        data_collator=data_collator,
+    )
+    
+    # Train
+    print("Starting training...")
+    trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
+    
+    # Save final model
+    print(f"Saving final model to {args.output_dir}")
+    trainer.save_model()
+    tokenizer.save_pretrained(args.output_dir)
+    
+    # Also save model config and state dict separately for easier loading
+    torch.save({
+        "model_state_dict": model.state_dict(),
+        "config": model_config,
+    }, os.path.join(args.output_dir, "model.pt"))
+
+
+if __name__ == "__main__":
+    main()
+

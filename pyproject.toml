@@ -1,0 +1,24 @@
+[project]
+name = "revdeq-pytorch"
+version = "0.1.0"
+description = "PyTorch implementation of Reversible Deep Equilibrium Models (RevDEQ)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.0.0",
+    "transformers>=4.35.0",
+    "datasets>=2.14.0",
+    "accelerate>=0.24.0",
+    "peft>=0.6.0",
+    "numpy>=1.24.0",
+    "scipy>=1.10.0",
+    "tqdm>=4.66.0",
+    "wandb>=0.15.0",
+    "pyyaml>=6.0",
+    "tensorboard>=2.14.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
