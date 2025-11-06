@@ -86,6 +86,13 @@ python -m pytest tests/ -v
 ./run_tests.sh
 ```
 
+The test suite verifies:
+- Model initialization and forward pass
+- Gradient computation (reversible function)
+- Training step execution
+- Model save/load functionality
+- No NaN/Inf values in gradients
+
 ## Project Structure
 
 ```
@@ -123,7 +130,41 @@ Edit `configs/default.yaml` to customize model and training settings:
 
 ## Google Colab
 
-This repository works on Google Colab. Open `notebooks/revdeq_colab.ipynb` in Colab and run the cells.
+This repository works on Google Colab. Open `notebooks/revdeq_colab.ipynb` in Colab to run experiments and verify that loss reaches around 25.
+
+The Colab notebook includes:
+- Repository cloning from GitHub
+- Loss tracking and visualization
+- Training progress monitoring
+- Target loss achievement verification
+
+## Model Architecture
+
+RevDEQ is a Transformer-based language model that uses **fixed-point iteration** instead of stacking multiple layers:
+
+```
+RevDEQ Model:
+├── Token Embedding (vocab_size → hidden_size)
+├── Position Embedding (max_position → hidden_size)
+├── Reversible Fixed Point Iteration
+│   └── RevDEQLayer (single layer applied repeatedly)
+│       ├── Self-Attention (Multi-head)
+│       └── Feed-Forward Network
+├── Layer Normalization
+└── Language Model Head (hidden_size → vocab_size)
+```
+
+**Key Features:**
+- **Fixed Point Iteration**: One layer is applied repeatedly until convergence, instead of stacking multiple layers
+- **Reversible Gradient Computation**: Memory-efficient gradient computation using `ReversibleFunction`
+- **Parameter Efficiency**: Sharing one layer reduces the number of parameters
+
+## Training Data
+
+**Default Dataset**: `wikitext/wikitext-2-raw-v1`
+- Wikipedia articles dataset (~36,000 training examples)
+- Tokenized with GPT-2 tokenizer
+- Task: Next Token Prediction (language modeling)
 
 ## Implementation Details
 
