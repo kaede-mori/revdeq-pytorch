@@ -12,6 +12,7 @@ services:
       - ./data:/workspace/data
     environment:
       - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/workspace
     stdin_open: true
     tty: true
     # Uncomment if you have GPU access

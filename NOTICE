@@ -10,7 +10,7 @@ References:
   https://github.com/sammccallum/reversible-deq
   License: Apache-2.0
 
-This implementation is inspired by the original JAX/Equinox implementation but
-is independently implemented in PyTorch. The algorithm follows the paper's
-specification.
+This implementation is independently implemented in PyTorch following the paper's
+algorithm specification. The design principles of the original JAX/Equinox
+implementation were referenced, but the code is written from scratch for PyTorch.
 

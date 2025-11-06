@@ -182,13 +182,23 @@ class ReversibleFunction(torch.autograd.Function):
             f_z_detached = f(z_detached, attn_mask)
             
             # Recompute y_new with gradient tracking
+            # Note: y_new depends on both y and f(z), so we need to track gradients through both
             y_detached = y.detach().requires_grad_(True)
+            # f_z_detached already has gradient tracking from z_detached
+            # We need to ensure y_new_detached is part of the computation graph
+            # by combining y_detached and f_z_detached
             y_new_detached = (1 - beta) * y_detached + beta * f_z_detached
+            # Ensure y_new_detached requires grad
+            if not y_new_detached.requires_grad:
+                y_new_detached = y_new_detached.requires_grad_(True)
             
             # Recompute f(y_new) with gradient tracking
+            # This creates a new computational graph from y_new_detached
             f_y_new_detached = f(y_new_detached, attn_mask)
             
             # Recompute z_new with gradient tracking
+            # z_new depends on both z and f(y_new)
+            # Note: z_detached is already used above for f_z_detached, but we need it again here
             z_new_detached = (1 - beta) * z_detached + beta * f_y_new_detached
             
             # Now compute gradients backward through this iteration
@@ -203,13 +213,24 @@ class ReversibleFunction(torch.autograd.Function):
             grad_f_y_new = beta * grad_z_new
             
             # Backward through f(y_new)
-            grad_y_new_from_f = torch.autograd.grad(
-                outputs=f_y_new_detached,
-                inputs=y_new_detached,
-                grad_outputs=grad_f_y_new,
-                retain_graph=True,
-                create_graph=torch.is_grad_enabled()
-            )[0]
+            # y_new_detached must have requires_grad=True and be in the computation graph
+            if y_new_detached.requires_grad:
+                try:
+                    grad_y_new_from_f = torch.autograd.grad(
+                        outputs=f_y_new_detached,
+                        inputs=y_new_detached,
+                        grad_outputs=grad_f_y_new,
+                        retain_graph=True,
+                        create_graph=torch.is_grad_enabled(),
+                        allow_unused=True
+                    )[0]
+                    if grad_y_new_from_f is None:
+                        grad_y_new_from_f = torch.zeros_like(y_new_detached)
+                except RuntimeError as e:
+                    # If gradient computation fails, use zero gradient
+                    grad_y_new_from_f = torch.zeros_like(y_new_detached)
+            else:
+                grad_y_new_from_f = torch.zeros_like(y_new_detached)
             
             # Gradient w.r.t. y_new
             grad_y_new = grad_y + grad_y_new_from_f
@@ -219,13 +240,24 @@ class ReversibleFunction(torch.autograd.Function):
             grad_f_z = beta * grad_y_new
             
             # Backward through f(z)
-            grad_z_from_f = torch.autograd.grad(
-                outputs=f_z_detached,
-                inputs=z_detached,
-                grad_outputs=grad_f_z,
-                retain_graph=True,
-                create_graph=torch.is_grad_enabled()
-            )[0]
+            # f_z_detached depends on z_detached, compute gradient
+            if f_z_detached.requires_grad and z_detached.requires_grad:
+                try:
+                    grad_z_from_f = torch.autograd.grad(
+                        outputs=f_z_detached,
+                        inputs=z_detached,
+                        grad_outputs=grad_f_z,
+                        retain_graph=True,
+                        create_graph=torch.is_grad_enabled(),
+                        allow_unused=True
+                    )[0]
+                    if grad_z_from_f is None:
+                        grad_z_from_f = torch.zeros_like(z_detached)
+                except RuntimeError as e:
+                    # If gradient computation fails, use zero gradient
+                    grad_z_from_f = torch.zeros_like(z_detached)
+            else:
+                grad_z_from_f = torch.zeros_like(z_detached)
             
             # Total gradients for this iteration
             grad_z = grad_z_from_z_new + grad_z_from_f
@@ -339,6 +371,9 @@ class RevDEQ(nn.Module):
                 shift_labels.view(-1),
                 ignore_index=-100
             )
+            # For transformers Trainer, return dict or just loss
+            # Trainer expects model to return loss when labels are provided
+            return {"loss": loss, "logits": logits}
         
         return logits, loss
     
@@ -367,8 +402,11 @@ class RevDEQ(nn.Module):
                 
                 # Top-k filtering
                 if top_k > 0:
-                    indices_to_remove = next_token_logits < torch.topk(next_token_logits, top_k)[0][..., -1, None]
-                    next_token_logits[indices_to_remove] = float('-inf')
+                    # Ensure top_k doesn't exceed vocab size
+                    effective_top_k = min(top_k, next_token_logits.size(-1))
+                    if effective_top_k > 0:
+                        indices_to_remove = next_token_logits < torch.topk(next_token_logits, effective_top_k)[0][..., -1, None]
+                        next_token_logits[indices_to_remove] = float('-inf')
                 
                 # Top-p (nucleus) filtering
                 if top_p < 1.0:

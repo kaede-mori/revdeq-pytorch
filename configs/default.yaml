@@ -17,7 +17,7 @@ beta: 0.8  # Relaxation parameter for reversible updates
 num_epochs: 3
 batch_size: 4
 gradient_accumulation_steps: 4
-learning_rate: 5e-5
+learning_rate: 0.00005  # 5e-5 (YAML doesn't handle scientific notation well)
 weight_decay: 0.01
 warmup_steps: 1000
 logging_steps: 100
@@ -26,7 +26,7 @@ save_total_limit: 3
 fp16: true
 bf16: false
 dataloader_num_workers: 4
-report_to: "tensorboard"
+report_to: "none"  # Use "tensorboard" if model.config.to_json_string() is implemented
 
 # Tokenizer
 tokenizer: "gpt2"

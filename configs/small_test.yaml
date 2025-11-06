@@ -1,0 +1,33 @@
+# RevDEQ Small Test Configuration (for quick testing)
+
+# Model configuration (smaller for testing)
+hidden_size: 128
+num_layers: 2
+num_heads: 4
+intermediate_size: 256
+dropout: 0.1
+max_position_embeddings: 128
+vocab_size: 50257
+num_fixed_point_iterations: 5
+fixed_point_tol: 0.00001
+use_reversible: true
+beta: 0.8
+
+# Training configuration
+num_epochs: 1
+batch_size: 2
+gradient_accumulation_steps: 2
+learning_rate: 0.00005
+weight_decay: 0.01
+warmup_steps: 10
+logging_steps: 5
+save_steps: 50
+save_total_limit: 2
+fp16: false  # CPUなのでfalse
+bf16: false
+dataloader_num_workers: 2
+report_to: "none"
+
+# Tokenizer
+tokenizer: "gpt2"
+

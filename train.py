@@ -52,10 +52,20 @@ def load_config(config_path: str) -> dict:
     """Load configuration from YAML file"""
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
+    
+    # Convert string scientific notation to float
+    float_keys = ["learning_rate", "fixed_point_tol"]
+    for key in float_keys:
+        if key in config and isinstance(config[key], str):
+            try:
+                config[key] = float(config[key])
+            except ValueError:
+                pass
+    
     return config
 
 
-def prepare_dataset(dataset_name: str = "wikitext", dataset_config: str = "wikitext-2-raw-v1"):
+def prepare_dataset(dataset_name: str = "wikitext", dataset_config: str = "wikitext-2-raw-v1", max_texts: int = None):
     """Prepare dataset for training"""
     print(f"Loading dataset: {dataset_name}/{dataset_config}")
     dataset = load_dataset(dataset_name, dataset_config, split="train")
@@ -65,6 +75,8 @@ def prepare_dataset(dataset_name: str = "wikitext", dataset_config: str = "wikit
     for example in dataset:
         if "text" in example and len(example["text"].strip()) > 0:
             texts.append(example["text"])
+            if max_texts is not None and len(texts) >= max_texts:
+                break
     
     return texts
 
@@ -116,8 +128,10 @@ def main():
     model = RevDEQ(model_config)
     
     # Prepare dataset
-    texts = prepare_dataset(args.dataset, args.dataset_config)
+    max_texts = config.get("max_texts", None)  # Limit dataset size for testing
+    texts = prepare_dataset(args.dataset, args.dataset_config, max_texts=max_texts)
     train_dataset = RevDEQDataset(texts, tokenizer, max_length=model_config.max_position_embeddings)
+    print(f"Dataset size: {len(train_dataset)} examples")
     
     # Training arguments
     training_args = TrainingArguments(
@@ -132,13 +146,13 @@ def main():
         logging_steps=config.get("logging_steps", 100),
         save_steps=config.get("save_steps", 1000),
         save_total_limit=config.get("save_total_limit", 3),
-        evaluation_strategy="no",
-        save_strategy="steps",
+        eval_strategy="no",
+        save_strategy="no",  # We'll save manually to avoid safetensors issue
         load_best_model_at_end=False,
         fp16=config.get("fp16", torch.cuda.is_available()),
         bf16=config.get("bf16", False),
         dataloader_num_workers=config.get("dataloader_num_workers", 4),
-        report_to=config.get("report_to", "tensorboard"),
+        report_to=[] if config.get("report_to") == "none" else config.get("report_to", "tensorboard"),
         remove_unused_columns=False,
         push_to_hub=False,
     )
@@ -149,8 +163,32 @@ def main():
         mlm=False,
     )
     
-    # Initialize trainer
-    trainer = Trainer(
+    # Custom Trainer class to handle our model's output format
+    # Note: Our model returns dict with 'loss' and 'logits' when labels are provided
+    class RevDEQTrainer(Trainer):
+        def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
+            """Custom loss computation for RevDEQ"""
+            labels = inputs.get("labels")
+            outputs = model(**inputs)
+            
+            if isinstance(outputs, dict):
+                loss = outputs.get("loss")
+                if return_outputs:
+                    return loss, outputs
+                return loss
+            elif isinstance(outputs, tuple):
+                logits, loss = outputs
+                if return_outputs:
+                    return loss, {"logits": logits}
+                return loss
+            else:
+                # Fallback - should not happen
+                if return_outputs:
+                    return None, outputs
+                return None
+    
+    # Use custom trainer
+    trainer = RevDEQTrainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset,
@@ -163,14 +201,18 @@ def main():
     
     # Save final model
     print(f"Saving final model to {args.output_dir}")
-    trainer.save_model()
-    tokenizer.save_pretrained(args.output_dir)
     
-    # Also save model config and state dict separately for easier loading
+    # Save using torch.save to avoid safetensors issue with shared weights
+    # (lm_head.weight and token_embedding.weight share memory)
+    os.makedirs(args.output_dir, exist_ok=True)
     torch.save({
         "model_state_dict": model.state_dict(),
         "config": model_config,
     }, os.path.join(args.output_dir, "model.pt"))
+    
+    tokenizer.save_pretrained(args.output_dir)
+    
+    print("Model saved successfully!")
 
 
 if __name__ == "__main__":
