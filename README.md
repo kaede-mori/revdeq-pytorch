@@ -120,13 +120,15 @@ RevDEQ/
 
 Edit `configs/default.yaml` to customize model and training settings:
 
-- `hidden_size`: Hidden layer size
-- `num_layers`: Number of layers
+- `hidden_size`: Hidden layer size (default: 768, Colab notebook uses 1440 for ~100M parameters)
+- `num_layers`: Number of layers (for DEQ, this is typically 1 as the layer is reused in fixed-point iteration)
 - `num_fixed_point_iterations`: Maximum fixed point iterations
 - `fixed_point_tol`: Convergence tolerance
 - `beta`: Relaxation parameter for reversible updates (0 < beta <= 1)
 - `learning_rate`: Learning rate
 - `batch_size`: Batch size
+
+**Note**: The Colab notebook (`notebooks/revdeq_colab.ipynb`) uses `hidden_size=1440` to achieve approximately 100M parameters, which is a standard and easily understandable configuration.
 
 ## Google Colab
 
@@ -134,9 +136,17 @@ This repository works on Google Colab. Open `notebooks/revdeq_colab.ipynb` in Co
 
 The Colab notebook includes:
 - Repository cloning from GitHub
-- Loss tracking and visualization
+- **Model parameter counting**: Detailed parameter breakdown (target: ~100M parameters)
+- **Loss and Perplexity (PPL) tracking**: Real-time loss and PPL visualization
+- **Memory usage monitoring**: Maximum CUDA memory usage tracking
+- **Training time statistics**: Average step time and total training time
+- **Inference time measurement**: Average inference time for text generation
 - Training progress monitoring
 - Target loss achievement verification
+
+**Model Configuration**:
+- Default model size: ~98M parameters (`hidden_size=1440`)
+- Standard Transformer architecture with reversible fixed-point iteration
 
 ## Model Architecture
 
