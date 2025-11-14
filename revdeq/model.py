@@ -23,15 +23,15 @@ class RevDEQConfig:
     num_layers: int = 12
     num_heads: int = 12
     intermediate_size: int = 3072
-    max_position_embeddings: int = 512
-    vocab_size: int = 50257
+    max_position_embeddings: int = 448  # Source: language-deq.py line 255
+    vocab_size: int = 50304  # Source: language-deq.py line 254 (padded to multiple of 32)
     layer_norm_eps: float = 1e-5
     use_bias: bool = False
     # RevDEQ specific parameters
-    num_fixed_point_iterations: int = 10
-    fixed_point_tol: float = 1e-5
+    num_fixed_point_iterations: int = 4  # Source: language-deq.py line 259
+    fixed_point_tol: float = 1e-3  # Source: language-deq.py line 258
     use_reversible: bool = True
-    beta: float = 0.8  # Relaxation parameter for reversible updates
+    beta: float = 0.5  # Relaxation parameter (source: language-deq.py line 257)
 
 
 class RevDEQLayer(nn.Module):
@@ -357,7 +357,7 @@ class RevDEQ(nn.Module):
         # At each iteration, x is injected: z = z + attention(norm1(z + x))
         if self.config.use_reversible and self.training:
             # Use reversible function for training (memory efficient)
-            z0 = x.clone()  # Initialize with input embeddings
+            z0 = torch.zeros_like(x)  # Zero initialization (source: language-deq.py line 113)
             z_final = ReversibleFunction.apply(
                 self.forward_layer,
                 z0,
@@ -370,7 +370,7 @@ class RevDEQ(nn.Module):
             x = z_final
         else:
             # Simple fixed point iteration for inference or non-reversible mode
-            z = x.clone()  # Initialize with input embeddings
+            z = torch.zeros_like(x)  # Zero initialization (source: language-deq.py line 113)
             for _ in range(self.config.num_fixed_point_iterations):
                 z_new = self.forward_layer(z, x, attn_mask)  # Inject x at each iteration
                 diff = torch.norm(z_new - z)

@@ -5,18 +5,18 @@ hidden_size: 768
 num_layers: 12
 num_heads: 12
 intermediate_size: 3072
-max_position_embeddings: 512
-vocab_size: 50257
-num_fixed_point_iterations: 10
-fixed_point_tol: 1e-5
+max_position_embeddings: 448  # Source: language-deq.py line 255
+vocab_size: 50304  # Source: language-deq.py line 254 (50257 padded to multiple of 32)
+num_fixed_point_iterations: 4  # Source: language-deq.py line 259
+fixed_point_tol: 1e-3  # Source: language-deq.py line 258
 use_reversible: true
-beta: 0.8  # Relaxation parameter for reversible updates
+beta: 0.5  # Relaxation parameter for reversible updates (source: language-deq.py line 257)
 
 # Training configuration
 num_epochs: 3
 batch_size: 4
 gradient_accumulation_steps: 4
-learning_rate: 0.00005  # 5e-5 (YAML doesn't handle scientific notation well)
+learning_rate: 0.0003  # 3e-4 (source: language-deq.py line 260)
 weight_decay: 0.01
 warmup_steps: 1000
 logging_steps: 100

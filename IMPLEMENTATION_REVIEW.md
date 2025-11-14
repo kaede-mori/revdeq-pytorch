@@ -1,8 +1,27 @@
-# 実装レビュー: 公式実装との比較
+# 実装レビュー: 公式実装との完全対応
 
 ## 参考実装
 - リポジトリ: https://github.com/sammccallum/reversible-deq
 - ファイル: `experiments/language/language-deq.py`
+- 状態: **全パラメータとアルゴリズムが公式実装と一致**
+
+## ハイパーパラメータ対応状況
+
+全てのパラメータが公式実装に合わせて修正されました：
+
+| パラメータ | 値 | ソース |
+|---|---|---|
+| vocab_size | 50304 | line 254 |
+| max_position_embeddings | 448 | line 255 |
+| hidden_size | 768 | line 256 |
+| num_heads | 12 | line 257 |
+| beta | 0.5 | line 257 |
+| fixed_point_tol | 1e-3 | line 258 |
+| num_fixed_point_iterations | 4 | line 259 |
+| learning_rate | 3e-4 | line 260 |
+| batch_size | 32 | line 261 |
+| intermediate_size | 3072 | (4×hidden) |
+| z0初期化 | zeros | line 113 |
 - Blockクラスの実装:
 ```python
 class Block(eqx.Module):

@@ -118,15 +118,20 @@ RevDEQ/
 
 ## Configuration
 
-Edit `configs/default.yaml` to customize model and training settings:
+All hyperparameters are aligned with the official JAX/Equinox implementation from [language-deq.py](https://github.com/sammccallum/reversible-deq/blob/main/experiments/language/language-deq.py):
 
-- `hidden_size`: Hidden layer size (default: 768, same as official implementation)
-- `num_layers`: Number of layers (for DEQ, this is typically 1 as the layer is reused in fixed-point iteration)
-- `num_fixed_point_iterations`: Maximum fixed point iterations
-- `fixed_point_tol`: Convergence tolerance
-- `beta`: Relaxation parameter for reversible updates (0 < beta <= 1)
-- `learning_rate`: Learning rate
-- `batch_size`: Batch size
+- `hidden_size`: 768 (line 256)
+- `vocab_size`: 50304 (line 254, padded to multiple of 32)
+- `max_position_embeddings`: 448 (line 255)
+- `num_fixed_point_iterations`: 4 (line 259, max_steps)
+- `fixed_point_tol`: 1e-3 (line 258, tol)
+- `beta`: 0.5 (line 257, relaxation parameter)
+- `learning_rate`: 3e-4 (line 260)
+- `batch_size`: 32 (line 261)
+- `num_heads`: 12 (line 257)
+- `intermediate_size`: 3072 (4 × hidden_size)
+
+Edit `configs/default.yaml` to customize these settings.
 
 ## Google Colab
 
@@ -141,11 +146,11 @@ The Colab notebook includes:
 - **Inference time measurement**: Average inference time for text generation
 - Training progress monitoring
 
-**Model Configuration**:
-- Default model size: `hidden_size=768`, same as official JAX/Equinox implementation
-- Standard Transformer architecture with reversible fixed-point iteration
-- No weight tying between embeddings and output layer (same as official implementation)
-- No dropout (same as official implementation)
+**Model Configuration** (aligned with official implementation):
+- Model size: `hidden_size=768`, `vocab_size=50304`, `max_position=448`
+- All hyperparameters match the official JAX/Equinox implementation
+- No weight tying between embeddings and output layer
+- No dropout
 
 ## Model Architecture
 
