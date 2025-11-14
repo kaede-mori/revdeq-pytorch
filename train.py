@@ -102,7 +102,6 @@ def main():
     # Model configuration
     model_config = RevDEQConfig(
         hidden_size=config.get("hidden_size", 768),
-        num_layers=config.get("num_layers", 12),
         num_heads=config.get("num_heads", 12),
         intermediate_size=config.get("intermediate_size", 3072),
         max_position_embeddings=config.get("max_position_embeddings", 512),
@@ -201,7 +200,7 @@ def main():
     # Save final model
     print(f"Saving final model to {args.output_dir}")
     
-    # Save using torch.save to avoid safetensors issue with shared weights
+    # Save using torch.save
     os.makedirs(args.output_dir, exist_ok=True)
     torch.save({
         "model_state_dict": model.state_dict(),

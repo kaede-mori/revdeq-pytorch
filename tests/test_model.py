@@ -11,7 +11,6 @@ def test_model_initialization():
     """Test model initialization"""
     config = RevDEQConfig(
         hidden_size=64,
-        num_layers=2,
         num_heads=2,
         intermediate_size=128,
         vocab_size=100,
@@ -28,7 +27,6 @@ def test_model_forward():
     """Test model forward pass"""
     config = RevDEQConfig(
         hidden_size=64,
-        num_layers=2,
         num_heads=2,
         intermediate_size=128,
         vocab_size=100,
@@ -54,7 +52,6 @@ def test_model_forward_with_labels():
     """Test model forward pass with labels"""
     config = RevDEQConfig(
         hidden_size=64,
-        num_layers=2,
         num_heads=2,
         intermediate_size=128,
         vocab_size=100,
@@ -88,7 +85,6 @@ def test_reversible_function_gradient():
     """Test that reversible function computes gradients correctly"""
     config = RevDEQConfig(
         hidden_size=32,
-        num_layers=1,
         num_heads=2,
         intermediate_size=64,
         vocab_size=50,
@@ -133,7 +129,6 @@ def test_reversible_vs_simple_iteration():
     """Test that reversible and simple iteration produce similar results"""
     config_reversible = RevDEQConfig(
         hidden_size=32,
-        num_layers=1,
         num_heads=2,
         intermediate_size=64,
         vocab_size=50,
@@ -145,7 +140,6 @@ def test_reversible_vs_simple_iteration():
     
     config_simple = RevDEQConfig(
         hidden_size=32,
-        num_layers=1,
         num_heads=2,
         intermediate_size=64,
         vocab_size=50,
@@ -185,7 +179,6 @@ def test_gradient_check():
     """Test gradient computation using finite differences"""
     config = RevDEQConfig(
         hidden_size=16,
-        num_layers=1,
         num_heads=2,
         intermediate_size=32,
         vocab_size=20,
@@ -253,7 +246,6 @@ def test_model_generate():
     """Test text generation"""
     config = RevDEQConfig(
         hidden_size=32,
-        num_layers=1,
         num_heads=2,
         intermediate_size=32,
         vocab_size=20,

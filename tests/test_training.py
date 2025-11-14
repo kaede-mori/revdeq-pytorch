@@ -31,7 +31,6 @@ def test_training_step():
     """Test a single training step"""
     config = RevDEQConfig(
         hidden_size=32,
-        num_layers=1,
         num_heads=2,
         intermediate_size=32,
         vocab_size=20,
@@ -67,7 +66,6 @@ def test_training_multiple_steps():
     """Test multiple training steps to see if loss decreases"""
     config = RevDEQConfig(
         hidden_size=32,
-        num_layers=1,
         num_heads=2,
         intermediate_size=32,
         vocab_size=20,
@@ -115,7 +113,6 @@ def test_model_save_load():
     """Test saving and loading model"""
     config = RevDEQConfig(
         hidden_size=32,
-        num_layers=1,
         num_heads=2,
         intermediate_size=32,
         vocab_size=20,

@@ -20,7 +20,6 @@ from dataclasses import dataclass
 class RevDEQConfig:
     """Configuration for RevDEQ model"""
     hidden_size: int = 768
-    num_layers: int = 12
     num_heads: int = 12
     intermediate_size: int = 3072
     max_position_embeddings: int = 448  # Source: language-deq.py line 255
@@ -353,8 +352,6 @@ class RevDEQ(nn.Module):
         x = self.token_embedding(input_ids) + self.position_embedding(positions)
         
         # Fixed point iteration with input injection
-        # Initialize z0 with x (input embeddings)
-        # At each iteration, x is injected: z = z + attention(norm1(z + x))
         if self.config.use_reversible and self.training:
             # Use reversible function for training (memory efficient)
             z0 = torch.zeros_like(x)  # Zero initialization (source: language-deq.py line 113)
