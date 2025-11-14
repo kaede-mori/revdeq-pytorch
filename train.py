@@ -202,7 +202,6 @@ def main():
     print(f"Saving final model to {args.output_dir}")
     
     # Save using torch.save to avoid safetensors issue with shared weights
-    # (lm_head.weight and token_embedding.weight share memory)
     os.makedirs(args.output_dir, exist_ok=True)
     torch.save({
         "model_state_dict": model.state_dict(),
