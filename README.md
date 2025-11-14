@@ -120,7 +120,7 @@ RevDEQ/
 
 Edit `configs/default.yaml` to customize model and training settings:
 
-- `hidden_size`: Hidden layer size (default: 768, Colab notebook uses 1440 for ~100M parameters)
+- `hidden_size`: Hidden layer size (default: 768, same as official implementation)
 - `num_layers`: Number of layers (for DEQ, this is typically 1 as the layer is reused in fixed-point iteration)
 - `num_fixed_point_iterations`: Maximum fixed point iterations
 - `fixed_point_tol`: Convergence tolerance
@@ -128,25 +128,24 @@ Edit `configs/default.yaml` to customize model and training settings:
 - `learning_rate`: Learning rate
 - `batch_size`: Batch size
 
-**Note**: The Colab notebook (`notebooks/revdeq_colab.ipynb`) uses `hidden_size=1440` to achieve approximately 100M parameters, which is a standard and easily understandable configuration.
-
 ## Google Colab
 
 This repository works on Google Colab. Open `notebooks/revdeq_colab.ipynb` in Colab to run experiments and verify that loss reaches around 25.
 
 The Colab notebook includes:
 - Repository cloning from GitHub
-- **Model parameter counting**: Detailed parameter breakdown (target: ~100M parameters)
-- **Loss and Perplexity (PPL) tracking**: Real-time loss and PPL visualization
+- **Model parameter counting**: Detailed parameter breakdown
+- **Loss and Perplexity (PPL) tracking**: Real-time loss and PPL visualization (PPL = exp(loss))
 - **Memory usage monitoring**: Maximum CUDA memory usage tracking
 - **Training time statistics**: Average step time and total training time
 - **Inference time measurement**: Average inference time for text generation
 - Training progress monitoring
-- Target loss achievement verification
 
 **Model Configuration**:
-- Default model size: ~98M parameters (`hidden_size=1440`)
+- Default model size: `hidden_size=768`, same as official JAX/Equinox implementation
 - Standard Transformer architecture with reversible fixed-point iteration
+- No weight tying between embeddings and output layer (same as official implementation)
+- No dropout (same as official implementation)
 
 ## Model Architecture
 
@@ -171,8 +170,8 @@ RevDEQ Model:
 
 ## Training Data
 
-**Default Dataset**: `wikitext/wikitext-2-raw-v1`
-- Wikipedia articles dataset (~36,000 training examples)
+**Default Dataset**: `Salesforce/wikitext/wikitext-103-v1` (same as official implementation)
+- Wikipedia articles dataset
 - Tokenized with GPT-2 tokenizer
 - Task: Next Token Prediction (language modeling)
 

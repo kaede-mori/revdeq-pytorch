@@ -65,7 +65,7 @@ def load_config(config_path: str) -> dict:
     return config
 
 
-def prepare_dataset(dataset_name: str = "wikitext", dataset_config: str = "wikitext-2-raw-v1", max_texts: int = None):
+def prepare_dataset(dataset_name: str = "Salesforce/wikitext", dataset_config: str = "wikitext-103-v1", max_texts: int = None):
     """Prepare dataset for training"""
     print(f"Loading dataset: {dataset_name}/{dataset_config}")
     dataset = load_dataset(dataset_name, dataset_config, split="train")
@@ -85,9 +85,9 @@ def main():
     parser = argparse.ArgumentParser(description="Train RevDEQ model")
     parser.add_argument("--config", type=str, default="configs/default.yaml",
                        help="Path to configuration file")
-    parser.add_argument("--dataset", type=str, default="wikitext",
+    parser.add_argument("--dataset", type=str, default="Salesforce/wikitext",
                        help="Dataset name")
-    parser.add_argument("--dataset_config", type=str, default="wikitext-2-raw-v1",
+    parser.add_argument("--dataset_config", type=str, default="wikitext-103-v1",
                        help="Dataset configuration")
     parser.add_argument("--output_dir", type=str, default="./checkpoints",
                        help="Output directory for checkpoints")
@@ -105,7 +105,6 @@ def main():
         num_layers=config.get("num_layers", 12),
         num_heads=config.get("num_heads", 12),
         intermediate_size=config.get("intermediate_size", 3072),
-        dropout=config.get("dropout", 0.1),
         max_position_embeddings=config.get("max_position_embeddings", 512),
         vocab_size=config.get("vocab_size", 50257),
         num_fixed_point_iterations=config.get("num_fixed_point_iterations", 10),

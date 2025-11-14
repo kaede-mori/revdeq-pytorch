@@ -23,7 +23,6 @@ class RevDEQConfig:
     num_layers: int = 12
     num_heads: int = 12
     intermediate_size: int = 3072
-    dropout: float = 0.1
     max_position_embeddings: int = 512
     vocab_size: int = 50257
     layer_norm_eps: float = 1e-5
@@ -46,7 +45,7 @@ class RevDEQLayer(nn.Module):
         self.attention = nn.MultiheadAttention(
             embed_dim=config.hidden_size,
             num_heads=config.num_heads,
-            dropout=config.dropout,
+            dropout=0.0,
             batch_first=True,
             bias=config.use_bias
         )
@@ -55,9 +54,7 @@ class RevDEQLayer(nn.Module):
         self.ffn = nn.Sequential(
             nn.Linear(config.hidden_size, config.intermediate_size, bias=config.use_bias),
             nn.GELU(),
-            nn.Dropout(config.dropout),
-            nn.Linear(config.intermediate_size, config.hidden_size, bias=config.use_bias),
-            nn.Dropout(config.dropout)
+            nn.Linear(config.intermediate_size, config.hidden_size, bias=config.use_bias)
         )
         
         # Layer normalization
@@ -300,7 +297,6 @@ class RevDEQ(nn.Module):
         self.position_embedding = nn.Embedding(
             config.max_position_embeddings, config.hidden_size
         )
-        self.embedding_dropout = nn.Dropout(config.dropout)
         
         # Single layer (will be reused in fixed point iteration)
         self.layer = RevDEQLayer(config)
@@ -308,9 +304,6 @@ class RevDEQ(nn.Module):
         # Output layer
         self.ln_f = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
-        
-        # Tie weights
-        self.lm_head.weight = self.token_embedding.weight
         
     def forward_layer(self, z: torch.Tensor, x: torch.Tensor, attn_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         """Single forward pass through the layer with input injection
@@ -358,7 +351,6 @@ class RevDEQ(nn.Module):
         # Embeddings
         positions = torch.arange(0, seq_len, device=device).unsqueeze(0).expand(batch_size, -1)
         x = self.token_embedding(input_ids) + self.position_embedding(positions)
-        x = self.embedding_dropout(x)
         
         # Fixed point iteration with input injection
         # Initialize z0 with x (input embeddings)
